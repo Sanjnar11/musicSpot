@@ -450,10 +450,6 @@ def api_get_unpaid_students():
         'count': len(result),
         'unpaidStudents': result
     })
-
-# ============ WHATSAPP MESSAGE ============
-@app.route('/api/whatsapp/reminder', methods=['POST'])
-@login_required
 # ============ WHATSAPP API (FIXED) ============
 @app.route('/api/whatsapp/reminder', methods=['POST'])
 @login_required
@@ -598,6 +594,52 @@ Please contact the studio for more information.
         'message': message,
         'phone': phone if phone else None,
         'teacherName': teacher.name  # Send back the correct teacher name
+    })
+
+# ============ STATISTICS API (FIXED - Removed total attendance) ============
+@app.route('/api/stats', methods=['GET'])
+@login_required
+def api_get_stats():
+    total_students = Student.query.filter_by(teacher_id=request.teacher_id).count()
+    unpaid_students = Student.query.filter_by(teacher_id=request.teacher_id, fee_status='unpaid').count()
+    
+    paid_students = Student.query.filter_by(teacher_id=request.teacher_id, fee_status='paid').all()
+    total_revenue = sum(s.fee_amount for s in paid_students)
+    
+    # Get students who have completed their sessions this month
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    
+    # Count students who completed their required days
+    students = Student.query.filter_by(teacher_id=request.teacher_id).all()
+    completed_sessions = 0
+    for student in students:
+        days_present = Attendance.query.filter(
+            Attendance.student_id == student.id,
+            Attendance.date >= datetime(current_year, current_month, 1),
+            Attendance.status == True
+        ).count()
+        
+        if student.fee_plan == '12days':
+            total_required = 12
+        elif student.fee_plan == '8days':
+            total_required = 8
+        elif student.fee_plan == '3months':
+            total_required = 36
+        else:
+            total_required = 12
+        
+        if days_present >= total_required:
+            completed_sessions += 1
+    
+    return jsonify({
+        'success': True,
+        'stats': {
+            'totalStudents': total_students,
+            'unpaidStudents': unpaid_students,
+            'totalRevenue': total_revenue,
+            'completedSessions': completed_sessions  # Changed from attendance to completed sessions
+        }
     })
 
 # ============ STATISTICS API (FIXED - Removed total attendance) ============
