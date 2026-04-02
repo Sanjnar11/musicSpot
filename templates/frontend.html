@@ -223,7 +223,7 @@ async function loadStats() {
         `).join('');
     }
 
-   async function markAttendance(studentId) {
+  async function markAttendance(studentId) {
     const today = new Date().toISOString().split('T')[0];
     
     // First, check if already marked today
@@ -315,7 +315,7 @@ async function loadStats() {
         showModal(calendarHtml);
     }
 
-   async function markAttendanceOnDate(studentId, date) {
+  async function markAttendanceOnDate(studentId, date) {
     // First check if already marked on this date
     const calendarData = await apiCall(`/attendance/calendar/${studentId}?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`);
     const day = parseInt(date.split('-')[2]);
@@ -419,9 +419,9 @@ async function loadStats() {
         loadStudents();
     }
 
-   async function sendReminder(studentId, type) {
+  async function sendReminder(studentId, type) {
     const data = await apiCall('/whatsapp/reminder', 'POST', { studentId, type });
-    console.log(`Reminder sent by: ${data.teacherName}`); 
+    console.log(`Reminder sent by: ${data.teacherName}`); // Shows correct teacher name
     window.open(data.whatsappUrl, '_blank');
 }
 
