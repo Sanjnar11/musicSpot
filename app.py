@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from datetime import datetime, timedelta
 import os
@@ -8,7 +8,7 @@ from database import db, Teacher, Student, Attendance, Lesson, Session
 from author import hash_password, verify_password, login_required, verify_token, generate_token
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-app = Flask(__name__)
+app = Flask(__name__, static_folder=BASE_DIR, static_url_path='')
 CORS(app, supports_credentials=True, origins=['*'])
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'musicspot.db')
@@ -21,13 +21,12 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
     
-    # Create teachers with their instruments
     if not Teacher.query.filter_by(email='jaimit@musicspot.com').first():
         jaimit = Teacher(
             email='jaimit@musicspot.com',
             name='Jaimit Sir',
             password_hash=hash_password('studio123'),
-            instrument='both'  # Jaimit Sir can teach both Keyboard and Guitar
+            instrument='both'
         )
         db.session.add(jaimit)
         print("✅ Created Jaimit Sir account (Keyboard + Guitar)")
@@ -37,10 +36,10 @@ with app.app_context():
             email='jay@musicspot.com',
             name='Jay Sir',
             password_hash=hash_password('studio123'),
-            instrument='guitar'  # Jay Sir only teaches Guitar
+            instrument='guitar'
         )
         db.session.add(jay)
-        print("✅ Created Jay Sir account (Guitar )")
+        print("✅ Created Jay Sir account (Guitar only)")
     
     db.session.commit()
     print("✅ Database initialized")
@@ -48,7 +47,7 @@ with app.app_context():
 # ============ FRONTEND ============
 @app.route('/')
 def serve_frontend():
-    return render_template('frontend.html')
+    return send_from_directory(BASE_DIR, 'index.html')
 
 # ============ AUTHENTICATION API ============
 @app.route('/api/login', methods=['POST'])
@@ -112,7 +111,107 @@ def api_verify():
         }
     })
 
-# ============ STUDENT MANAGEMENT ============
+# ============ PROFILE MANAGEMENT API ============
+@app.route('/api/profile', methods=['GET'])
+@login_required
+def api_get_profile():
+    teacher = Teacher.query.get(request.teacher_id)
+    if not teacher:
+        return jsonify({'error': 'Teacher not found'}), 404
+    
+    return jsonify({
+        'success': True,
+        'profile': {
+            'id': teacher.id,
+            'name': teacher.name,
+            'email': teacher.email,
+            'instrument': teacher.instrument,
+            'phone': teacher.phone,
+            'address': teacher.address,
+            'profile_pic': teacher.profile_pic,
+            'created_at': teacher.created_at.isoformat(),
+            'last_login': teacher.last_login.isoformat() if teacher.last_login else None
+        }
+    })
+
+@app.route('/api/profile', methods=['PUT'])
+@login_required
+def api_update_profile():
+    teacher = Teacher.query.get(request.teacher_id)
+    if not teacher:
+        return jsonify({'error': 'Teacher not found'}), 404
+    
+    data = request.json
+    
+    if 'name' in data:
+        teacher.name = data['name']
+    if 'phone' in data:
+        teacher.phone = data['phone']
+    if 'address' in data:
+        teacher.address = data['address']
+    if 'profile_pic' in data:
+        teacher.profile_pic = data['profile_pic']
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': 'Profile updated successfully',
+        'profile': {
+            'id': teacher.id,
+            'name': teacher.name,
+            'email': teacher.email,
+            'instrument': teacher.instrument,
+            'phone': teacher.phone,
+            'address': teacher.address
+        }
+    })
+
+@app.route('/api/change-password', methods=['POST'])
+@login_required
+def api_change_password():
+    teacher = Teacher.query.get(request.teacher_id)
+    if not teacher:
+        return jsonify({'error': 'Teacher not found'}), 404
+    
+    data = request.json
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    confirm_password = data.get('confirm_password')
+    
+    if not current_password or not new_password or not confirm_password:
+        return jsonify({'error': 'All password fields are required'}), 400
+    
+    if new_password != confirm_password:
+        return jsonify({'error': 'New passwords do not match'}), 400
+    
+    if len(new_password) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters'}), 400
+    
+    if not verify_password(current_password, teacher.password_hash):
+        return jsonify({'error': 'Current password is incorrect'}), 401
+    
+    teacher.password_hash = hash_password(new_password)
+    db.session.commit()
+    
+    Session.query.filter_by(teacher_id=teacher.id).delete()
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': 'Password changed successfully. Please login again.'
+    })
+
+@app.route('/api/update-last-login', methods=['POST'])
+@login_required
+def api_update_last_login():
+    teacher = Teacher.query.get(request.teacher_id)
+    if teacher:
+        teacher.last_login = datetime.now()
+        db.session.commit()
+    return jsonify({'success': True})
+
+# ============ STUDENT MANAGEMENT API ============
 @app.route('/api/students', methods=['GET'])
 @login_required
 def api_get_students():
@@ -169,7 +268,6 @@ def api_create_student():
         data = request.json
         teacher = Teacher.query.get(request.teacher_id)
         
-        # Set fee amount based on plan
         fee_amount = data.get('feeAmount', 0)
         if fee_amount == 0:
             if data.get('feePlan') == '12days':
@@ -222,7 +320,29 @@ def api_delete_student(student_id):
     
     return jsonify({'success': True, 'message': f'{student.name} deleted'})
 
-# ============ ATTENDANCE ============
+@app.route('/api/students/<int:student_id>/payment', methods=['PATCH'])
+@login_required
+def api_update_payment(student_id):
+    student = Student.query.filter_by(id=student_id, teacher_id=request.teacher_id).first()
+    if not student:
+        return jsonify({'error': 'Student not found'}), 404
+    
+    data = request.json
+    student.fee_status = data.get('feeStatus', student.fee_status)
+    
+    if data.get('feeStatus') == 'paid':
+        student.last_payment_date = datetime.now().date()
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': f'Payment marked as {student.fee_status}',
+        'studentId': student_id,
+        'feeStatus': student.fee_status
+    })
+
+# ============ ATTENDANCE API ============
 @app.route('/api/attendance/calendar/<int:student_id>', methods=['GET'])
 @login_required
 def api_get_attendance_calendar(student_id):
@@ -267,9 +387,6 @@ def api_get_attendance_calendar(student_id):
         total_required = 12
         fee_text = "₹3,000/month"
     
-    days_remaining = total_required - days_present
-    session_completed = days_present >= total_required
-    
     return jsonify({
         'success': True,
         'studentId': student_id,
@@ -283,8 +400,8 @@ def api_get_attendance_calendar(student_id):
         'feeStatus': student.fee_status,
         'daysPresent': days_present,
         'totalRequired': total_required,
-        'daysRemaining': days_remaining,
-        'sessionCompleted': session_completed,
+        'daysRemaining': total_required - days_present,
+        'sessionCompleted': days_present >= total_required,
         'attendancePercentage': round((days_present / total_required * 100), 2) if total_required > 0 else 0,
         'calendar': calendar_data
     })
@@ -404,29 +521,7 @@ def api_get_today_attendance():
         'students': result
     })
 
-# ============ PAYMENT MANAGEMENT ============
-@app.route('/api/students/<int:student_id>/payment', methods=['PATCH'])
-@login_required
-def api_update_payment(student_id):
-    student = Student.query.filter_by(id=student_id, teacher_id=request.teacher_id).first()
-    if not student:
-        return jsonify({'error': 'Student not found'}), 404
-    
-    data = request.json
-    student.fee_status = data.get('feeStatus', student.fee_status)
-    
-    if data.get('feeStatus') == 'paid':
-        student.last_payment_date = datetime.now().date()
-    
-    db.session.commit()
-    
-    return jsonify({
-        'success': True,
-        'message': f'Payment marked as {student.fee_status}',
-        'studentId': student_id,
-        'feeStatus': student.fee_status
-    })
-
+# ============ PAYMENTS API ============
 @app.route('/api/payments/unpaid', methods=['GET'])
 @login_required
 def api_get_unpaid_students():
@@ -450,7 +545,8 @@ def api_get_unpaid_students():
         'count': len(result),
         'unpaidStudents': result
     })
-# ============ WHATSAPP API (FIXED) ============
+
+# ============ WHATSAPP API ============
 @app.route('/api/whatsapp/reminder', methods=['POST'])
 @login_required
 def api_send_whatsapp_reminder():
@@ -462,7 +558,7 @@ def api_send_whatsapp_reminder():
     if not student:
         return jsonify({'error': 'Student not found'}), 404
     
-    teacher = Teacher.query.get(request.teacher_id)  # This gets the CORRECT logged-in teacher
+    teacher = Teacher.query.get(request.teacher_id)
     
     current_month = datetime.now().month
     current_year = datetime.now().year
@@ -514,7 +610,6 @@ Thank you for your cooperation! 🙏
         remaining = total_required - days_present
         percentage = (days_present / total_required * 100) if total_required > 0 else 0
         
-        # Progress bar emoji
         progress_bar = ""
         filled = int(percentage / 10)
         for i in range(10):
@@ -593,10 +688,10 @@ Please contact the studio for more information.
         'whatsappUrl': whatsapp_url,
         'message': message,
         'phone': phone if phone else None,
-        'teacherName': teacher.name  # Send back the correct teacher name
+        'teacherName': teacher.name
     })
 
-# ============ STATISTICS API (FIXED - Removed total attendance) ============
+# ============ STATISTICS API (FIXED - ONLY ONE VERSION) ============
 @app.route('/api/stats', methods=['GET'])
 @login_required
 def api_get_stats():
@@ -606,11 +701,10 @@ def api_get_stats():
     paid_students = Student.query.filter_by(teacher_id=request.teacher_id, fee_status='paid').all()
     total_revenue = sum(s.fee_amount for s in paid_students)
     
-    # Get students who have completed their sessions this month
+    # Get students who have completed their sessions
     current_month = datetime.now().month
     current_year = datetime.now().year
     
-    # Count students who completed their required days
     students = Student.query.filter_by(teacher_id=request.teacher_id).all()
     completed_sessions = 0
     for student in students:
@@ -638,80 +732,7 @@ def api_get_stats():
             'totalStudents': total_students,
             'unpaidStudents': unpaid_students,
             'totalRevenue': total_revenue,
-            'completedSessions': completed_sessions  # Changed from attendance to completed sessions
-        }
-    })
-
-# ============ STATISTICS API (FIXED - Removed total attendance) ============
-@app.route('/api/stats', methods=['GET'])
-@login_required
-def api_get_stats():
-    total_students = Student.query.filter_by(teacher_id=request.teacher_id).count()
-    unpaid_students = Student.query.filter_by(teacher_id=request.teacher_id, fee_status='unpaid').count()
-    
-    paid_students = Student.query.filter_by(teacher_id=request.teacher_id, fee_status='paid').all()
-    total_revenue = sum(s.fee_amount for s in paid_students)
-    
-    # Get students who have completed their sessions this month
-    current_month = datetime.now().month
-    current_year = datetime.now().year
-    
-    # Count students who completed their required days
-    students = Student.query.filter_by(teacher_id=request.teacher_id).all()
-    completed_sessions = 0
-    for student in students:
-        days_present = Attendance.query.filter(
-            Attendance.student_id == student.id,
-            Attendance.date >= datetime(current_year, current_month, 1),
-            Attendance.status == True
-        ).count()
-        
-        if student.fee_plan == '12days':
-            total_required = 12
-        elif student.fee_plan == '8days':
-            total_required = 8
-        elif student.fee_plan == '3months':
-            total_required = 36
-        else:
-            total_required = 12
-        
-        if days_present >= total_required:
-            completed_sessions += 1
-    
-    return jsonify({
-        'success': True,
-        'stats': {
-            'totalStudents': total_students,
-            'unpaidStudents': unpaid_students,
-            'totalRevenue': total_revenue,
-            'completedSessions': completed_sessions  # Changed from attendance to completed sessions
-        }
-    })
-# ============ STATISTICS ============
-@app.route('/api/stats', methods=['GET'])
-@login_required
-def api_get_stats():
-    total_students = Student.query.filter_by(teacher_id=request.teacher_id).count()
-    unpaid_students = Student.query.filter_by(teacher_id=request.teacher_id, fee_status='unpaid').count()
-    
-    paid_students = Student.query.filter_by(teacher_id=request.teacher_id, fee_status='paid').all()
-    total_revenue = sum(s.fee_amount for s in paid_students)
-    
-    current_month = datetime.now().month
-    current_year = datetime.now().year
-    total_attendance = Attendance.query.join(Student).filter(
-        Student.teacher_id == request.teacher_id,
-        Attendance.date >= datetime(current_year, current_month, 1),
-        Attendance.status == True
-    ).count()
-    
-    return jsonify({
-        'success': True,
-        'stats': {
-            'totalStudents': total_students,
-            'unpaidStudents': unpaid_students,
-            'totalRevenue': total_revenue,
-            'thisMonthAttendance': total_attendance
+            'completedSessions': completed_sessions
         }
     })
 
@@ -722,6 +743,6 @@ if __name__ == '__main__':
     print(f"🌐 Server: http://localhost:3000")
     print("\n📧 Login Credentials:")
     print("   Jaimit Sir: jaimit@musicspot.com / studio123 (Keyboard + Guitar)")
-    print("   Jay Sir:    jay@musicspot.com / studio123 (Guitar)")
+    print("   Jay Sir:    jay@musicspot.com / studio123 (Guitar only)")
     print("=" * 60)
     app.run(debug=True, port=3000, host='0.0.0.0')
