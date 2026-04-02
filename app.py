@@ -47,7 +47,7 @@ with app.app_context():
 # ============ FRONTEND ============
 @app.route('/')
 def serve_frontend():
-    return send_from_directory(BASE_DIR, 'index.html')
+    return send_from_directory(BASE_DIR, 'frontend.html')
 
 # ============ AUTHENTICATION API ============
 @app.route('/api/login', methods=['POST'])
