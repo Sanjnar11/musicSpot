@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MusicSpot - Studio Management</title>
+    <title>MusicSpot - Studio Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
@@ -71,36 +71,37 @@
             <p class="text-[#d0c6ae]">Manage attendance, track progress, and send reminders</p>
         </div>
 
-       <!-- Stats - Updated -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-    <div class="bg-[#2a2a2a] rounded-xl p-4">
-        <div class="text-2xl font-bold text-[#ebc23e]" id="statStudents">0</div>
-        <div class="text-xs text-[#99907b]">📚 Total Students</div>
-    </div>
-    <div class="bg-[#2a2a2a] rounded-xl p-4">
-        <div class="text-2xl font-bold text-[#ebc23e]" id="statUnpaid">0</div>
-        <div class="text-xs text-[#99907b]">⚠️ Unpaid Fees</div>
-    </div>
-    <div class="bg-[#2a2a2a] rounded-xl p-4">
-        <div class="text-2xl font-bold text-[#ebc23e]" id="statRevenue">0</div>
-        <div class="text-xs text-[#99907b]">💰 Total Revenue (₹)</div>
-    </div>
-    <div class="bg-[#2a2a2a] rounded-xl p-4">
-        <div class="text-2xl font-bold text-[#ebc23e]" id="statCompleted">0</div>
-        <div class="text-xs text-[#99907b]">🎯 Sessions Completed</div>
-    </div>
-</div>
+        <!-- Stats - Updated with Completed Sessions -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-[#2a2a2a] rounded-xl p-4">
+                <div class="text-2xl font-bold text-[#ebc23e]" id="statStudents">0</div>
+                <div class="text-xs text-[#99907b]">📚 Total Students</div>
+            </div>
+            <div class="bg-[#2a2a2a] rounded-xl p-4">
+                <div class="text-2xl font-bold text-[#ebc23e]" id="statUnpaid">0</div>
+                <div class="text-xs text-[#99907b]">⚠️ Unpaid Fees</div>
+            </div>
+            <div class="bg-[#2a2a2a] rounded-xl p-4">
+                <div class="text-2xl font-bold text-[#ebc23e]" id="statRevenue">0</div>
+                <div class="text-xs text-[#99907b]">💰 Total Revenue (₹)</div>
+            </div>
+            <div class="bg-[#2a2a2a] rounded-xl p-4">
+                <div class="text-2xl font-bold text-[#ebc23e]" id="statCompleted">0</div>
+                <div class="text-xs text-[#99907b]">🎯 Sessions Completed</div>
+            </div>
+        </div>
 
         <!-- Tabs -->
-        <div class="flex gap-2 border-b border-[#4d4634] mb-6">
+        <div class="flex gap-2 border-b border-[#4d4634] mb-6 flex-wrap">
             <button onclick="switchTab('attendance')" id="tabAttendance" class="px-4 py-2 text-sm font-bold text-[#ebc23e] border-b-2 border-[#ebc23e]">📅 Mark Attendance</button>
             <button onclick="switchTab('students')" id="tabStudents" class="px-4 py-2 text-sm font-bold text-[#99907b]">👥 Students</button>
             <button onclick="switchTab('payments')" id="tabPayments" class="px-4 py-2 text-sm font-bold text-[#99907b]">💰 Payments</button>
+            <button onclick="switchTab('profile')" id="tabProfile" class="px-4 py-2 text-sm font-bold text-[#99907b]">👤 Profile</button>
         </div>
 
         <!-- Attendance Tab -->
         <div id="attendanceTab">
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                 <h3 class="text-xl font-bold">Today's Attendance - <span id="todayDate"></span></h3>
                 <button onclick="addStudent()" class="bg-[#ebc23e] text-[#3c2f00] px-4 py-2 rounded-lg text-sm font-bold">+ Add Student</button>
             </div>
@@ -115,6 +116,51 @@
         <!-- Payments Tab -->
         <div id="paymentsTab" class="hidden">
             <div id="paymentsList" class="space-y-3"></div>
+        </div>
+
+        <!-- Profile Tab -->
+        <div id="profileTab" class="hidden">
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-[#2a2a2a] rounded-xl p-6">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-20 h-20 bg-[#ebc23e]/20 rounded-full flex items-center justify-center">
+                            <span class="material-symbols-outlined text-5xl text-[#ebc23e]">person</span>
+                        </div>
+                        <div>
+                            <h3 id="profileName" class="text-2xl font-bold text-[#fff5e1]"></h3>
+                            <p id="profileEmail" class="text-[#d0c6ae]"></p>
+                            <p id="profileInstrument" class="text-sm text-[#ebc23e] mt-1"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs text-[#99907b] mb-1">Full Name</label>
+                            <input type="text" id="editName" class="w-full bg-[#0e0e0e] border border-[#4d4634] rounded-lg p-3 text-[#e5e2e1]">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-[#99907b] mb-1">Phone Number</label>
+                            <input type="tel" id="editPhone" placeholder="+91 XXXXX XXXXX" class="w-full bg-[#0e0e0e] border border-[#4d4634] rounded-lg p-3 text-[#e5e2e1]">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-[#99907b] mb-1">Address (Studio Location)</label>
+                            <textarea id="editAddress" rows="3" placeholder="Studio address" class="w-full bg-[#0e0e0e] border border-[#4d4634] rounded-lg p-3 text-[#e5e2e1]"></textarea>
+                        </div>
+                        
+                        <div class="flex gap-3 pt-4 flex-wrap">
+                            <button onclick="updateProfile()" class="flex-1 bg-[#ebc23e] text-[#3c2f00] py-2 rounded-lg font-bold">💾 Save Changes</button>
+                            <button onclick="showChangePasswordModal()" class="flex-1 border border-[#ebc23e] text-[#ebc23e] py-2 rounded-lg font-bold">🔒 Change Password</button>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 pt-6 border-t border-[#4d4634]">
+                        <div class="text-xs text-[#99907b] space-y-1">
+                            <p>📅 Account created: <span id="profileCreatedAt"></span></p>
+                            <p>🕐 Last login: <span id="profileLastLogin"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 </div>
@@ -147,7 +193,6 @@
             if (data.success) {
                 currentTeacher = data.teacher;
                 
-                // Update UI based on teacher's instrument
                 let instrumentText = '';
                 if (currentTeacher.instrument === 'both') {
                     instrumentText = '🎹 Keyboard + 🎸 Guitar';
@@ -159,6 +204,8 @@
                 document.getElementById('welcomeName').innerText = currentTeacher.name.split(' ')[0];
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('mainApp').classList.remove('hidden');
+                
+                await apiCall('/update-last-login', 'POST');
                 loadData();
             } else {
                 alert('Login failed: ' + (data.error || 'Unknown error'));
@@ -180,13 +227,13 @@
         await loadPayments();
     }
 
-async function loadStats() {
-    const stats = await apiCall('/stats');
-    document.getElementById('statStudents').innerText = stats.stats.totalStudents;
-    document.getElementById('statUnpaid').innerText = stats.stats.unpaidStudents;
-    document.getElementById('statRevenue').innerText = stats.stats.totalRevenue;
-    document.getElementById('statCompleted').innerText = stats.stats.completedSessions || 0;
-}
+    async function loadStats() {
+        const stats = await apiCall('/stats');
+        document.getElementById('statStudents').innerText = stats.stats.totalStudents;
+        document.getElementById('statUnpaid').innerText = stats.stats.unpaidStudents;
+        document.getElementById('statRevenue').innerText = stats.stats.totalRevenue;
+        document.getElementById('statCompleted').innerText = stats.stats.completedSessions || 0;
+    }
 
     async function loadTodayAttendance() {
         const today = new Date();
@@ -211,11 +258,10 @@ async function loadStats() {
                     </div>
                     ${s.completed ? '<div class="text-xs text-red-400 mt-1">⚠️ Session completed! New session starts tomorrow</div>' : ''}
                 </div>
-                <div class="flex gap-2">
-                    ${!s.attendedToday ? 
-                        `<button onclick="markAttendance(${s.id})" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-bold">✅ Mark Present</button>` :
-                        `<span class="bg-green-600/30 px-4 py-2 rounded-lg text-sm">✅ Already Marked Today</span>`
-                    }
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="markAttendance(${s.id})" class="mark-attendance-btn bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-bold">
+                        ${s.attendedToday ? '❌ Unmark Present' : '✅ Mark Present'}
+                    </button>
                     <button onclick="showCalendar(${s.id})" class="bg-[#ebc23e]/20 hover:bg-[#ebc23e]/30 px-3 py-2 rounded-lg text-sm">📅 View Calendar</button>
                     ${s.feeStatus === 'unpaid' ? `<button onclick="sendReminder(${s.id}, 'payment')" class="bg-red-600/20 hover:bg-red-600/30 px-3 py-2 rounded-lg text-sm">💬 Reminder</button>` : ''}
                 </div>
@@ -223,44 +269,40 @@ async function loadStats() {
         `).join('');
     }
 
-  async function markAttendance(studentId) {
-    const today = new Date().toISOString().split('T')[0];
-    
-    // First, check if already marked today
-    const todayData = await apiCall('/attendance/today');
-    const student = todayData.students.find(s => s.id === studentId);
-    
-    if (student && student.attendedToday) {
-        // If already marked, ask if they want to unmark
-        const confirmUnmark = confirm(`⚠️ ${student.name} is already marked present today.\n\nClick "OK" to REMOVE attendance (mark as absent)\nClick "Cancel" to keep as present.`);
+    async function markAttendance(studentId) {
+        const today = new Date().toISOString().split('T')[0];
         
-        if (confirmUnmark) {
-            // Mark as absent (toggle off)
-            const result = await apiCall('/attendance/mark', 'POST', { studentId, date: today, status: false });
-            alert(`❌ Attendance REMOVED for ${result.studentName}\nThey are now marked absent for today.`);
-        } else {
-            return; // Keep as present
-        }
-    } else {
-        // Mark as present
-        const result = await apiCall('/attendance/mark', 'POST', { studentId, date: today, status: true });
+        const todayData = await apiCall('/attendance/today');
+        const student = todayData.students.find(s => s.id === studentId);
         
-        if (result.alert) {
-            alert(result.alert);
-            if (result.sessionCompleted) {
-                const sendReminder = confirm(`🎉 ${result.studentName} completed their session!\n\nSend WhatsApp notification to parents?`);
-                if (sendReminder) await sendReminder(studentId, 'completion');
+        if (student && student.attendedToday) {
+            const confirmUnmark = confirm(`⚠️ ${student.name} is already marked present today.\n\nClick "OK" to REMOVE attendance (mark as absent)\nClick "Cancel" to keep as present.`);
+            
+            if (confirmUnmark) {
+                const result = await apiCall('/attendance/mark', 'POST', { studentId, date: today, status: false });
+                alert(`❌ Attendance REMOVED for ${result.studentName}\nThey are now marked absent for today.`);
+            } else {
+                return;
             }
         } else {
-            alert(`✅ Attendance marked for ${result.studentName}\n📊 Progress: ${result.daysPresent}/${result.totalRequired} days (${result.attendancePercentage}%)`);
+            const result = await apiCall('/attendance/mark', 'POST', { studentId, date: today, status: true });
+            
+            if (result.alert) {
+                alert(result.alert);
+                if (result.sessionCompleted) {
+                    const sendReminderConfirm = confirm(`🎉 ${result.studentName} completed their session!\n\nSend WhatsApp notification to parents?`);
+                    if (sendReminderConfirm) await sendReminder(studentId, 'completion');
+                }
+            } else {
+                alert(`✅ Attendance marked for ${result.studentName}\n📊 Progress: ${result.daysPresent}/${result.totalRequired} days (${result.attendancePercentage}%)`);
+            }
         }
+        
+        loadTodayAttendance();
+        loadStats();
+        loadStudents();
     }
-    
-    // Refresh all data
-    loadTodayAttendance();
-    loadStats();
-    loadStudents();
-}
+
     async function showCalendar(studentId) {
         const student = students.find(s => s.id === studentId);
         const currentDate = new Date();
@@ -297,7 +339,7 @@ async function loadStats() {
         
         calendarHtml += `</div>
             <div class="mt-6 p-4 bg-[#1a1a1a] rounded-lg">
-                <div class="flex justify-between items-center">
+                <div class="flex justify-between items-center flex-wrap gap-2">
                     <div><span class="text-[#ebc23e]">📊 Progress:</span> ${data.daysPresent}/${data.totalRequired} days</div>
                     <div><span class="text-[#ebc23e]">💰 Fee:</span> ${data.feeText} ${data.feeStatus === 'paid' ? '✅ Paid' : '⚠️ Pending'}</div>
                 </div>
@@ -305,7 +347,7 @@ async function loadStats() {
                     <div class="bg-[#ebc23e] h-2 rounded-full" style="width: ${data.attendancePercentage}%"></div>
                 </div>
                 ${data.sessionCompleted ? '<div class="text-red-400 text-sm mt-2">🎉 Session completed! New session starts tomorrow</div>' : ''}
-                <div class="flex gap-2 mt-4">
+                <div class="flex gap-2 mt-4 flex-wrap">
                     <button onclick="closeModal()" class="flex-1 border border-[#4d4634] py-2 rounded-lg">Close</button>
                     <button onclick="sendReminder(${studentId}, 'attendance')" class="flex-1 bg-[#ebc23e] text-[#3c2f00] py-2 rounded-lg">Send Progress Report</button>
                 </div>
@@ -315,40 +357,40 @@ async function loadStats() {
         showModal(calendarHtml);
     }
 
-  async function markAttendanceOnDate(studentId, date) {
-    // First check if already marked on this date
-    const calendarData = await apiCall(`/attendance/calendar/${studentId}?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`);
-    const day = parseInt(date.split('-')[2]);
-    const isAlreadyMarked = calendarData.calendar[day] && calendarData.calendar[day].status;
-    
-    let newStatus = true;
-    let actionMessage = "";
-    
-    if (isAlreadyMarked) {
-        const confirmUnmark = confirm(`⚠️ This student is already marked PRESENT on ${date}.\n\nClick "OK" to REMOVE attendance\nClick "Cancel" to keep as present.`);
-        if (confirmUnmark) {
-            newStatus = false;
-            actionMessage = "REMOVED";
+    async function markAttendanceOnDate(studentId, date) {
+        const calendarData = await apiCall(`/attendance/calendar/${studentId}?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`);
+        const day = parseInt(date.split('-')[2]);
+        const isAlreadyMarked = calendarData.calendar[day] && calendarData.calendar[day].status;
+        
+        let newStatus = true;
+        let actionMessage = "";
+        
+        if (isAlreadyMarked) {
+            const confirmUnmark = confirm(`⚠️ This student is already marked PRESENT on ${date}.\n\nClick "OK" to REMOVE attendance\nClick "Cancel" to keep as present.`);
+            if (confirmUnmark) {
+                newStatus = false;
+                actionMessage = "REMOVED";
+            } else {
+                return;
+            }
         } else {
-            return;
+            actionMessage = "marked";
+            newStatus = true;
         }
-    } else {
-        actionMessage = "marked";
-        newStatus = true;
+        
+        const result = await apiCall('/attendance/mark', 'POST', { studentId, date, status: newStatus });
+        
+        if (actionMessage === "REMOVED") {
+            alert(`❌ Attendance REMOVED for ${result.studentName} on ${date}`);
+        } else {
+            alert(`✅ Attendance marked for ${result.studentName} on ${date}\n📊 Progress: ${result.daysPresent}/${result.totalRequired} days`);
+        }
+        
+        showCalendar(studentId);
+        loadTodayAttendance();
+        loadStats();
     }
-    
-    const result = await apiCall('/attendance/mark', 'POST', { studentId, date, status: newStatus });
-    
-    if (actionMessage === "REMOVED") {
-        alert(`❌ Attendance REMOVED for ${result.studentName} on ${date}`);
-    } else {
-        alert(`✅ Attendance marked for ${result.studentName} on ${date}\n📊 Progress: ${result.daysPresent}/${result.totalRequired} days`);
-    }
-    
-    showCalendar(studentId);
-    loadTodayAttendance();
-    loadStats();
-}
+
     async function loadStudents() {
         const data = await apiCall('/students');
         students = data.students;
@@ -361,7 +403,7 @@ async function loadStats() {
         
         container.innerHTML = students.map(s => `
             <div class="bg-[#2a2a2a] rounded-xl p-4">
-                <div class="flex justify-between items-start">
+                <div class="flex justify-between items-start flex-wrap gap-2">
                     <div>
                         <h4 class="font-bold text-lg">${escapeHtml(s.name)}</h4>
                         <p class="text-sm text-[#d0c6ae]">${escapeHtml(s.course)} | ${s.feePlan === '12days' ? '12 days/mo (₹3,000)' : s.feePlan === '8days' ? '8 days/mo (₹2,200)' : '3 months (₹7,500)'}</p>
@@ -403,7 +445,7 @@ async function loadStats() {
                     <p class="text-sm">${escapeHtml(s.course)} | ₹${s.feeAmount}</p>
                     <p class="text-xs text-[#99907b]">📞 ${escapeHtml(s.contact)} | 👪 ${escapeHtml(s.parentContact || 'No parent contact')}</p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-wrap">
                     <button onclick="markPaid(${s.id})" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-bold">✅ Mark Paid</button>
                     <button onclick="sendReminder(${s.id}, 'payment')" class="bg-[#25D366] hover:bg-[#20bd59] text-white px-4 py-2 rounded-lg text-sm font-bold">📱 WhatsApp</button>
                 </div>
@@ -419,11 +461,11 @@ async function loadStats() {
         loadStudents();
     }
 
-  async function sendReminder(studentId, type) {
-    const data = await apiCall('/whatsapp/reminder', 'POST', { studentId, type });
-    console.log(`Reminder sent by: ${data.teacherName}`); // Shows correct teacher name
-    window.open(data.whatsappUrl, '_blank');
-}
+    async function sendReminder(studentId, type) {
+        const data = await apiCall('/whatsapp/reminder', 'POST', { studentId, type });
+        console.log(`Reminder sent by: ${data.teacherName}`);
+        window.open(data.whatsappUrl, '_blank');
+    }
 
     async function deleteStudent(studentId) {
         if (confirm('Delete this student? This cannot be undone.')) {
@@ -432,8 +474,109 @@ async function loadStats() {
         }
     }
 
+    async function loadProfile() {
+        const data = await apiCall('/profile');
+        if (data.success) {
+            const profile = data.profile;
+            document.getElementById('profileName').innerText = profile.name;
+            document.getElementById('profileEmail').innerText = profile.email;
+            document.getElementById('editName').value = profile.name;
+            document.getElementById('editPhone').value = profile.phone || '';
+            document.getElementById('editAddress').value = profile.address || '';
+            
+            let instrumentText = profile.instrument === 'both' ? '🎹 Keyboard + 🎸 Guitar Teacher' : '🎸 Guitar Teacher';
+            document.getElementById('profileInstrument').innerHTML = instrumentText;
+            
+            const createdAt = new Date(profile.created_at).toLocaleDateString('en-IN');
+            document.getElementById('profileCreatedAt').innerText = createdAt;
+            
+            if (profile.last_login) {
+                const lastLogin = new Date(profile.last_login).toLocaleString('en-IN');
+                document.getElementById('profileLastLogin').innerText = lastLogin;
+            } else {
+                document.getElementById('profileLastLogin').innerText = 'First login';
+            }
+        }
+    }
+
+    async function updateProfile() {
+        const updateData = {
+            name: document.getElementById('editName').value,
+            phone: document.getElementById('editPhone').value,
+            address: document.getElementById('editAddress').value
+        };
+        
+        const result = await apiCall('/profile', 'PUT', updateData);
+        if (result.success) {
+            alert('✅ Profile updated successfully!');
+            loadProfile();
+            document.getElementById('teacherName').innerText = result.profile.name;
+            document.getElementById('welcomeName').innerText = result.profile.name.split(' ')[0];
+        } else {
+            alert('❌ Failed to update profile');
+        }
+    }
+
+    function showChangePasswordModal() {
+        const modalHtml = `
+            <div class="bg-[#2a2a2a] rounded-xl p-6 max-w-md w-full">
+                <h3 class="text-2xl font-bold mb-4">🔒 Change Password</h3>
+                <form id="changePasswordForm" class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-[#99907b] mb-1">Current Password</label>
+                        <input type="password" id="currentPassword" required class="w-full bg-[#0e0e0e] border border-[#4d4634] rounded-lg p-3">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-[#99907b] mb-1">New Password</label>
+                        <input type="password" id="newPassword" required class="w-full bg-[#0e0e0e] border border-[#4d4634] rounded-lg p-3">
+                        <p class="text-xs text-[#99907b] mt-1">Minimum 6 characters</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-[#99907b] mb-1">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" required class="w-full bg-[#0e0e0e] border border-[#4d4634] rounded-lg p-3">
+                    </div>
+                    <div class="flex gap-3 pt-4">
+                        <button type="button" onclick="closeModal()" class="flex-1 border border-[#4d4634] py-2 rounded-lg">Cancel</button>
+                        <button type="submit" class="flex-1 bg-[#ebc23e] text-[#3c2f00] py-2 rounded-lg font-bold">Change Password</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        showModal(modalHtml);
+        
+        document.getElementById('changePasswordForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                alert('❌ New passwords do not match!');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('❌ Password must be at least 6 characters!');
+                return;
+            }
+            
+            const result = await apiCall('/change-password', 'POST', {
+                current_password: currentPassword,
+                new_password: newPassword,
+                confirm_password: confirmPassword
+            });
+            
+            if (result.success) {
+                alert('✅ Password changed successfully! Please login again.');
+                closeModal();
+                setTimeout(() => logout(), 2000);
+            } else {
+                alert('❌ ' + result.error);
+            }
+        };
+    }
+
     function addStudent() {
-        // Get available instruments based on teacher
         let instrumentOptions = '';
         if (currentTeacher.instrument === 'both') {
             instrumentOptions = `
@@ -492,23 +635,35 @@ async function loadStats() {
         document.getElementById('attendanceTab').classList.add('hidden');
         document.getElementById('studentsTab').classList.add('hidden');
         document.getElementById('paymentsTab').classList.add('hidden');
+        document.getElementById('profileTab').classList.add('hidden');
         
-        document.getElementById('tabAttendance').classList.remove('text-[#ebc23e]', 'border-b-2', 'border-[#ebc23e]');
-        document.getElementById('tabStudents').classList.remove('text-[#ebc23e]', 'border-b-2', 'border-[#ebc23e]');
-        document.getElementById('tabPayments').classList.remove('text-[#ebc23e]', 'border-b-2', 'border-[#ebc23e]');
+        const tabs = ['attendance', 'students', 'payments', 'profile'];
+        tabs.forEach(t => {
+            const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+            if (btn) {
+                btn.classList.remove('text-[#ebc23e]', 'border-b-2', 'border-[#ebc23e]');
+                btn.classList.add('text-[#99907b]');
+            }
+        });
+        
+        const activeTab = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+        if (activeTab) {
+            activeTab.classList.add('text-[#ebc23e]', 'border-b-2', 'border-[#ebc23e]');
+            activeTab.classList.remove('text-[#99907b]');
+        }
         
         if (tab === 'attendance') {
             document.getElementById('attendanceTab').classList.remove('hidden');
-            document.getElementById('tabAttendance').classList.add('text-[#ebc23e]', 'border-b-2', 'border-[#ebc23e]');
             loadTodayAttendance();
         } else if (tab === 'students') {
             document.getElementById('studentsTab').classList.remove('hidden');
-            document.getElementById('tabStudents').classList.add('text-[#ebc23e]', 'border-b-2', 'border-[#ebc23e]');
             loadStudents();
-        } else {
+        } else if (tab === 'payments') {
             document.getElementById('paymentsTab').classList.remove('hidden');
-            document.getElementById('tabPayments').classList.add('text-[#ebc23e]', 'border-b-2', 'border-[#ebc23e]');
             loadPayments();
+        } else if (tab === 'profile') {
+            document.getElementById('profileTab').classList.remove('hidden');
+            loadProfile();
         }
     }
 
