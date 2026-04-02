@@ -454,6 +454,9 @@ def api_get_unpaid_students():
 # ============ WHATSAPP MESSAGE ============
 @app.route('/api/whatsapp/reminder', methods=['POST'])
 @login_required
+# ============ WHATSAPP API (FIXED) ============
+@app.route('/api/whatsapp/reminder', methods=['POST'])
+@login_required
 def api_send_whatsapp_reminder():
     data = request.json
     student_id = data.get('studentId')
@@ -463,7 +466,7 @@ def api_send_whatsapp_reminder():
     if not student:
         return jsonify({'error': 'Student not found'}), 404
     
-    teacher = Teacher.query.get(request.teacher_id)
+    teacher = Teacher.query.get(request.teacher_id)  # This gets the CORRECT logged-in teacher
     
     current_month = datetime.now().month
     current_year = datetime.now().year
@@ -476,81 +479,114 @@ def api_send_whatsapp_reminder():
     if student.fee_plan == '12days':
         total_required = 12
         plan_text = "12 days per month"
+        plan_emoji = "📅"
     elif student.fee_plan == '8days':
         total_required = 8
         plan_text = "8 days per month"
+        plan_emoji = "📆"
     elif student.fee_plan == '3months':
         total_required = 36
         plan_text = "36 classes over 3 months"
+        plan_emoji = "🎯"
     else:
         total_required = 12
         plan_text = "12 days per month"
+        plan_emoji = "📅"
     
     if reminder_type == 'payment':
-        message = f"""📢 *MusicSpot Studio Reminder*
+        message = f"""📢 *🎵 MusicSpot Studio - Payment Reminder* 🎵
 
 Dear Parent/Guardian of *{student.name}*,
 
 This is a gentle reminder that the tuition fees for *{student.course}* lessons are pending.
 
-📅 *Fee Plan:* {plan_text}
+{plan_emoji} *Fee Plan:* {plan_text}
 💰 *Amount Due:* ₹{student.fee_amount}
 👨‍🏫 *Teacher:* {teacher.name}
+📱 *Contact:* {teacher.phone if teacher.phone else 'Not provided'}
 
-Please clear the dues at your earliest convenience.
+Please clear the dues at your earliest convenience to ensure uninterrupted classes.
 
-Thank you for your cooperation.
+Thank you for your cooperation! 🙏
 
 *Regards,*
 {teacher.name}
-MusicSpot Studio"""
-
+🎵 MusicSpot Studio
+━━━━━━━━━━━━━━━━━━━━━"""
+    
     elif reminder_type == 'attendance':
         remaining = total_required - days_present
-        message = f"""📢 *MusicSpot Studio - Attendance Update*
+        percentage = (days_present / total_required * 100) if total_required > 0 else 0
+        
+        # Progress bar emoji
+        progress_bar = ""
+        filled = int(percentage / 10)
+        for i in range(10):
+            if i < filled:
+                progress_bar += "█"
+            else:
+                progress_bar += "░"
+        
+        message = f"""📢 *🎵 MusicSpot Studio - Attendance Update* 🎵
 
 Dear Parent/Guardian of *{student.name}*,
+
+Here's the attendance progress for this session:
+
+{progress_bar} {percentage:.0f}%
 
 📊 *Progress:* {days_present} out of {total_required} classes completed
 📈 *Remaining:* {remaining} classes
-📅 *Plan:* {plan_text}
-👨‍🏫 *Course:* {student.course}
+{plan_emoji} *Plan:* {plan_text}
+🎸 *Course:* {student.course}
+👨‍🏫 *Teacher:* {teacher.name}
 
-Please ensure regular attendance for better learning outcomes.
+Please ensure regular attendance for better learning outcomes! 🌟
 
 *Regards,*
 {teacher.name}
-MusicSpot Studio"""
-
+🎵 MusicSpot Studio
+━━━━━━━━━━━━━━━━━━━━━"""
+    
     elif reminder_type == 'completion':
-        message = f"""🎉 *MusicSpot Studio - Session Completion*
+        message = f"""🎉 *🎵 MusicSpot Studio - Session Completed!* 🎉🎊
 
 Dear Parent/Guardian of *{student.name}*,
 
-Congratulations! Your child has successfully completed {days_present}/{total_required} classes for this session.
+🎯 *CONGRATULATIONS!* 🎯
+
+Your child has successfully completed {days_present}/{total_required} classes for this session!
 
 📅 *Plan:* {plan_text}
-👨‍🏫 *Course:* {student.course}
+🎸 *Course:* {student.course}
+👨‍🏫 *Teacher:* {teacher.name}
+⭐ *Performance:* Excellent!
 
-A new session starts from tomorrow. Please contact us to renew.
+A new session starts from tomorrow. Please contact us to renew the subscription.
 
-Thank you for choosing MusicSpot Studio!
+Thank you for choosing MusicSpot Studio! 🙏
 
 *Regards,*
 {teacher.name}
-MusicSpot Studio"""
-
+🎵 MusicSpot Studio
+━━━━━━━━━━━━━━━━━━━━━"""
+    
     else:
-        message = f"""📢 *MusicSpot Studio Update*
+        message = f"""📢 *🎵 MusicSpot Studio Update* 🎵
 
 Dear Parent/Guardian of {student.name},
 
-This is an update regarding {student.course} lessons.
+This is an update regarding {student.course} lessons at MusicSpot Studio.
+
+👨‍🏫 *Teacher:* {teacher.name}
+
+Please contact the studio for more information.
 
 *Regards,*
 {teacher.name}
-MusicSpot Studio"""
-
+🎵 MusicSpot Studio
+━━━━━━━━━━━━━━━━━━━━━"""
+    
     phone = re.sub(r'\D', '', student.parent_contact if student.parent_contact else student.contact)
     encoded_message = message.replace('\n', '%0A').replace(' ', '%20').replace('*', '%2A')
     
@@ -561,9 +597,54 @@ MusicSpot Studio"""
         'whatsappUrl': whatsapp_url,
         'message': message,
         'phone': phone if phone else None,
-        'reminderType': reminder_type
+        'teacherName': teacher.name  # Send back the correct teacher name
     })
 
+# ============ STATISTICS API (FIXED - Removed total attendance) ============
+@app.route('/api/stats', methods=['GET'])
+@login_required
+def api_get_stats():
+    total_students = Student.query.filter_by(teacher_id=request.teacher_id).count()
+    unpaid_students = Student.query.filter_by(teacher_id=request.teacher_id, fee_status='unpaid').count()
+    
+    paid_students = Student.query.filter_by(teacher_id=request.teacher_id, fee_status='paid').all()
+    total_revenue = sum(s.fee_amount for s in paid_students)
+    
+    # Get students who have completed their sessions this month
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    
+    # Count students who completed their required days
+    students = Student.query.filter_by(teacher_id=request.teacher_id).all()
+    completed_sessions = 0
+    for student in students:
+        days_present = Attendance.query.filter(
+            Attendance.student_id == student.id,
+            Attendance.date >= datetime(current_year, current_month, 1),
+            Attendance.status == True
+        ).count()
+        
+        if student.fee_plan == '12days':
+            total_required = 12
+        elif student.fee_plan == '8days':
+            total_required = 8
+        elif student.fee_plan == '3months':
+            total_required = 36
+        else:
+            total_required = 12
+        
+        if days_present >= total_required:
+            completed_sessions += 1
+    
+    return jsonify({
+        'success': True,
+        'stats': {
+            'totalStudents': total_students,
+            'unpaidStudents': unpaid_students,
+            'totalRevenue': total_revenue,
+            'completedSessions': completed_sessions  # Changed from attendance to completed sessions
+        }
+    })
 # ============ STATISTICS ============
 @app.route('/api/stats', methods=['GET'])
 @login_required
