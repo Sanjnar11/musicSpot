@@ -180,13 +180,13 @@
         await loadPayments();
     }
 
-    async function loadStats() {
-        const stats = await apiCall('/stats');
-        document.getElementById('statStudents').innerText = stats.stats.totalStudents;
-        document.getElementById('statUnpaid').innerText = stats.stats.unpaidStudents;
-        document.getElementById('statRevenue').innerText = stats.stats.totalRevenue;
-        document.getElementById('statAttendance').innerText = stats.stats.thisMonthAttendance;
-    }
+async function loadStats() {
+    const stats = await apiCall('/stats');
+    document.getElementById('statStudents').innerText = stats.stats.totalStudents;
+    document.getElementById('statUnpaid').innerText = stats.stats.unpaidStudents;
+    document.getElementById('statRevenue').innerText = stats.stats.totalRevenue;
+    document.getElementById('statCompleted').innerText = stats.stats.completedSessions || 0;
+}
 
     async function loadTodayAttendance() {
         const today = new Date();
@@ -223,24 +223,44 @@
         `).join('');
     }
 
-    async function markAttendance(studentId) {
-        const today = new Date().toISOString().split('T')[0];
+   async function markAttendance(studentId) {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // First, check if already marked today
+    const todayData = await apiCall('/attendance/today');
+    const student = todayData.students.find(s => s.id === studentId);
+    
+    if (student && student.attendedToday) {
+        // If already marked, ask if they want to unmark
+        const confirmUnmark = confirm(`⚠️ ${student.name} is already marked present today.\n\nClick "OK" to REMOVE attendance (mark as absent)\nClick "Cancel" to keep as present.`);
+        
+        if (confirmUnmark) {
+            // Mark as absent (toggle off)
+            const result = await apiCall('/attendance/mark', 'POST', { studentId, date: today, status: false });
+            alert(`❌ Attendance REMOVED for ${result.studentName}\nThey are now marked absent for today.`);
+        } else {
+            return; // Keep as present
+        }
+    } else {
+        // Mark as present
         const result = await apiCall('/attendance/mark', 'POST', { studentId, date: today, status: true });
         
         if (result.alert) {
             alert(result.alert);
             if (result.sessionCompleted) {
-                const confirmReminder = confirm(`${result.studentName} completed their session! Send WhatsApp notification to parents?`);
-                if (confirmReminder) await sendReminder(studentId, 'completion');
+                const sendReminder = confirm(`🎉 ${result.studentName} completed their session!\n\nSend WhatsApp notification to parents?`);
+                if (sendReminder) await sendReminder(studentId, 'completion');
             }
         } else {
-            alert(`✅ Attendance marked for ${result.studentName}\nProgress: ${result.daysPresent}/${result.totalRequired} days (${result.attendancePercentage}%)`);
+            alert(`✅ Attendance marked for ${result.studentName}\n📊 Progress: ${result.daysPresent}/${result.totalRequired} days (${result.attendancePercentage}%)`);
         }
-        loadTodayAttendance();
-        loadStats();
-        loadStudents();
     }
-
+    
+    // Refresh all data
+    loadTodayAttendance();
+    loadStats();
+    loadStudents();
+}
     async function showCalendar(studentId) {
         const student = students.find(s => s.id === studentId);
         const currentDate = new Date();
@@ -295,14 +315,40 @@
         showModal(calendarHtml);
     }
 
-    async function markAttendanceOnDate(studentId, date) {
-        const result = await apiCall('/attendance/mark', 'POST', { studentId, date, status: true });
-        alert(`✅ Attendance marked for ${date}`);
-        showCalendar(studentId);
-        loadTodayAttendance();
-        loadStats();
+   async function markAttendanceOnDate(studentId, date) {
+    // First check if already marked on this date
+    const calendarData = await apiCall(`/attendance/calendar/${studentId}?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`);
+    const day = parseInt(date.split('-')[2]);
+    const isAlreadyMarked = calendarData.calendar[day] && calendarData.calendar[day].status;
+    
+    let newStatus = true;
+    let actionMessage = "";
+    
+    if (isAlreadyMarked) {
+        const confirmUnmark = confirm(`⚠️ This student is already marked PRESENT on ${date}.\n\nClick "OK" to REMOVE attendance\nClick "Cancel" to keep as present.`);
+        if (confirmUnmark) {
+            newStatus = false;
+            actionMessage = "REMOVED";
+        } else {
+            return;
+        }
+    } else {
+        actionMessage = "marked";
+        newStatus = true;
     }
-
+    
+    const result = await apiCall('/attendance/mark', 'POST', { studentId, date, status: newStatus });
+    
+    if (actionMessage === "REMOVED") {
+        alert(`❌ Attendance REMOVED for ${result.studentName} on ${date}`);
+    } else {
+        alert(`✅ Attendance marked for ${result.studentName} on ${date}\n📊 Progress: ${result.daysPresent}/${result.totalRequired} days`);
+    }
+    
+    showCalendar(studentId);
+    loadTodayAttendance();
+    loadStats();
+}
     async function loadStudents() {
         const data = await apiCall('/students');
         students = data.students;
@@ -373,10 +419,11 @@
         loadStudents();
     }
 
-    async function sendReminder(studentId, type) {
-        const data = await apiCall('/whatsapp/reminder', 'POST', { studentId, type });
-        window.open(data.whatsappUrl, '_blank');
-    }
+   async function sendReminder(studentId, type) {
+    const data = await apiCall('/whatsapp/reminder', 'POST', { studentId, type });
+    console.log(`Reminder sent by: ${data.teacherName}`); 
+    window.open(data.whatsappUrl, '_blank');
+}
 
     async function deleteStudent(studentId) {
         if (confirm('Delete this student? This cannot be undone.')) {
